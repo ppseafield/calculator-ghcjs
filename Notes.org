@@ -1,0 +1,9 @@
+* GHCJS testing project: Calculator GHCJS
+
+** Element, HTMLElement, HTMLButtonElement different types
+   Nice but cumbersome by itself. I'm sure other libraries make this nicer.
+
+** OverloadedStrings/IsString + To/FromJSString = madness
+   Because I had OverloadedStrings on, a string literal could be a String, Text, etc., and
+   then the ToJSString could be any ToJSString String, ToJSString Text, etc. GHC couldn't infer
+   what type I wanted, so I had to sprinkle some ":: String" and ":: IO String" in the code.
