@@ -24,6 +24,16 @@ import qualified Text.Blaze.XHtml5.Attributes as A
 import Text.Blaze.Html.Renderer.String
 
 
+-- | List of binary operators for our calculator.
+-- Let's stick with floats to keep it simple.
+operators :: [( (Float -> Float -> Float), String )]
+operators = [ ( (+), "plus" )
+            , ( (-), "minus" )
+            , ( (*), "times" )
+            , ( (/), "divide" )
+            ]
+
+
 main :: IO ()
 main = runWebGUI $ \webView -> do
   Just doc  <- webViewGetDomDocument webView
@@ -32,7 +42,8 @@ main = runWebGUI $ \webView -> do
   -- Set the body text to our rendered blaze template
   htmlElementSetInnerHTML body $ renderHtml template
 
-  Just calc <- fmap castToHTMLInputElement <$> documentGetElementById doc ("calc-input" :: String)
+  Just calc  <- fmap castToHTMLInputElement <$> documentGetElementById doc ("calc-input" :: String)
+  Just total <- fmap castToHTMLElement <$> documentGetElementById doc ("total" :: String)
 
   -- Handle number button clicks
   forM_ [0..9] $ \number -> do 
@@ -40,14 +51,19 @@ main = runWebGUI $ \webView -> do
     Just btnN <- documentGetElementById doc ("btn-" ++ num :: String)
     elementOnclick btnN $ clickNumber calc num
 
+  -- Math Operations
+  forM_ operators $ \(operator, name) -> do
+    return ()
+
   -- Backspace and clear all buttons
   Just btnBSP <- documentGetElementById doc ("btn-backspace" :: String)
   elementOnclick btnBSP $ clickBackspace calc
 
   Just btnCC <- documentGetElementById doc ("btn-clear-all" :: String)
-  elementOnclick btnCC $ clickClearAll calc
+  elementOnclick btnCC $ clickClearAll total calc
 
   return ()
+
 
 
 -- Event handlers
@@ -66,9 +82,12 @@ clickBackspace calc = liftIO $ do
     htmlInputElementSetValue calc $ init current
 
 
-clickClearAll :: HTMLInputElement -> EventM MouseEvent Element ()
-clickClearAll calc = liftIO $ htmlInputElementSetValue calc ("" :: String)
-
+clickClearAll :: HTMLElement -> HTMLInputElement -> EventM MouseEvent Element ()
+clickClearAll total calc = liftIO $ do
+  current <- (htmlInputElementGetValue calc :: IO String)
+  if null current
+    then htmlElementSetInnerHTML total ("0.00" :: String)
+    else htmlInputElementSetValue calc ("" :: String)
 
 
 
@@ -77,7 +96,7 @@ clickClearAll calc = liftIO $ htmlInputElementSetValue calc ("" :: String)
 template :: Html
 template = do
   H.style "#operators { padding: 10px 0px; }"
-  H.style "#total, #calc-input { text-align: right; }"
+  H.style "#calc-input { text-align: right; }"
   H.style ".btn { margin: 2px; padding: 8px; }"
   
   h1 "Calculator-GHCJS"
