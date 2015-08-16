@@ -3,7 +3,7 @@ module Main where
 
 import Prelude hiding (div, id)
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader 
 import Control.Monad.IO.Class
 
@@ -40,14 +40,37 @@ main = runWebGUI $ \webView -> do
     Just btnN <- documentGetElementById doc ("btn-" ++ num :: String)
     elementOnclick btnN $ clickNumber calc num
 
+  -- Backspace and clear all buttons
+  Just btnBSP <- documentGetElementById doc ("btn-backspace" :: String)
+  elementOnclick btnBSP $ clickBackspace calc
+
+  Just btnCC <- documentGetElementById doc ("btn-clear-all" :: String)
+  elementOnclick btnCC $ clickClearAll calc
+
   return ()
 
 
+-- Event handlers
+
 -- | Appends the number to the current calc-input value.
 clickNumber :: HTMLInputElement -> String -> EventM MouseEvent Element ()
-clickNumber calc number = do
-  current <- liftIO $ (htmlInputElementGetValue calc :: IO String)
-  liftIO . htmlInputElementSetValue calc $ current ++ number
+clickNumber calc number = liftIO $ do
+  current <- (htmlInputElementGetValue calc :: IO String)
+  htmlInputElementSetValue calc (current ++ number :: String)
+
+-- | Remove the rightmost digit in the current calc-input value.
+clickBackspace :: HTMLInputElement -> EventM MouseEvent Element ()
+clickBackspace calc = liftIO $ do
+  current <- (htmlInputElementGetValue calc :: IO String)
+  when (not . null $ current) $  do
+    htmlInputElementSetValue calc $ init current
+
+
+clickClearAll :: HTMLInputElement -> EventM MouseEvent Element ()
+clickClearAll calc = liftIO $ htmlInputElementSetValue calc ("" :: String)
+
+
+
 
 
 -- | The template for the whole page.
