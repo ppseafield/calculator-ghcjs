@@ -55,6 +55,10 @@ main = runWebGUI $ \webView -> do
     Just btnN <- documentGetElementById doc ("btn-" ++ num :: String)
     elementOnclick btnN $ clickNumber calc num
 
+  -- Decimal clicks
+  Just btnDEC <- documentGetElementById doc ("btn-decimal" :: String)
+  elementOnclick btnDEC $ clickDecimal calc
+
   -- Math Operations
   forM_ operators $ \(operator, name) -> do
     Just btnOP <- documentGetElementById doc ("btn-" ++ name :: String)
@@ -62,7 +66,6 @@ main = runWebGUI $ \webView -> do
 
   Just btnEQ <- documentGetElementById doc ("btn-equals" :: String)
   elementOnclick btnEQ $ clickEquals divTotal calc
-
 
   -- Backspace and clear all buttons
   Just btnBSP <- documentGetElementById doc ("btn-backspace" :: String)
@@ -85,7 +88,7 @@ clickOperator divTotal calc operator = liftIO $ do
   case (readMaybe total, readMaybe current) :: (Maybe Float, Maybe Float) of
    ok@(Just t, Just c) -> do
      htmlElementSetInnerText divTotal $ show (t `operator` c)
-     htmlInputElementSetValue calc  ("" :: String)
+     htmlInputElementSetValue calc  ("0" :: String)
    _ -> putStrLn "Somehow our parse to float failed on calc-input or total. What were you doing?"
 
 -- | Make the current input the total value  
@@ -95,7 +98,7 @@ clickEquals divTotal calc = liftIO $ do
   case readMaybe current :: Maybe Float of
    Just c -> do
      htmlElementSetInnerHTML divTotal $ show c
-     htmlInputElementSetValue calc ("" :: String)
+     htmlInputElementSetValue calc ("0" :: String)
    _ -> return ()
 
 
@@ -103,14 +106,27 @@ clickEquals divTotal calc = liftIO $ do
 clickNumber :: HTMLInputElement -> String -> EventM MouseEvent Element ()
 clickNumber calc number = liftIO $ do
   current <- (htmlInputElementGetValue calc :: IO String)
-  htmlInputElementSetValue calc (current ++ number :: String)
+  if current == "0" 
+    then htmlInputElementSetValue calc (number :: String)
+    else htmlInputElementSetValue calc (current ++ number :: String)
 
--- | Remove the rightmost digit in the current calc-input value.
+
+-- | Add a period, but only if one doesn't aleady exist.
+clickDecimal :: HTMLInputElement -> EventM MouseEvent Element ()
+clickDecimal calc = liftIO $ do
+  current <- (htmlInputElementGetValue calc :: IO String)
+  when (not $ elem '.' current) $ 
+    htmlInputElementSetValue calc (current ++ "." :: String)
+    
+
+
+-- | Remove the rightmost digit in the current calc-input value. If it's the last one, substitute '0'.
 clickBackspace :: HTMLInputElement -> EventM MouseEvent Element ()
 clickBackspace calc = liftIO $ do
   current <- (htmlInputElementGetValue calc :: IO String)
-  when (not . null $ current) $  do
-    htmlInputElementSetValue calc $ init current
+  if length current <= 1
+    then htmlInputElementSetValue calc ("0" :: String)
+    else htmlInputElementSetValue calc $ init current
 
 
 clickClearAll :: HTMLElement -> HTMLInputElement -> EventM MouseEvent Element ()
@@ -118,7 +134,7 @@ clickClearAll divTotal calc = liftIO $ do
   current <- (htmlInputElementGetValue calc :: IO String)
   if null current
     then htmlElementSetInnerHTML divTotal ("0.00" :: String)
-    else htmlInputElementSetValue calc ("" :: String)
+    else htmlInputElementSetValue calc ("0" :: String)
 
 
 
@@ -133,7 +149,7 @@ template = do
   h1 "Calculator-GHCJS"
   div ! id "total" $ "0.00"
   div $ do
-    input ! type_ "text" ! id "calc-input" ! disabled "disabled"
+    input ! type_ "text" ! id "calc-input" ! disabled "disabled" ! value "0"
     button ! class_ "btn" ! type_ "button" ! id "btn-backspace" $ "<"
     button ! class_ "btn" ! type_ "button" ! id "btn-clear-all" $ "CC"  
 
@@ -157,5 +173,5 @@ template = do
     button ! class_ "btn" ! type_ "button" ! id "btn-2" $ "2"  
     button ! class_ "btn" ! type_ "button" ! id "btn-3" $ "3"  
   div $ do
-    button ! class_ "btn" ! type_ "button" ! id "btn-point" $ "."  
+    button ! class_ "btn" ! type_ "button" ! id "btn-decimal" $ "."  
     button ! class_ "btn" ! type_ "button" ! id "btn-0" $ "0"  
